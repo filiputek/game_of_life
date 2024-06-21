@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta  http-equiv="Content-Type" content="text/html; charset="utf-8">
+    <title>gra w życie</title>
+</head>
+<body>
+    <h1>gra w życie conway'a</h1>
+    <canvas id="plansza_canvas" width="400px" height = "300px">
+    </canvas>
+    <br>
+    <button onclick="startuj()">start</button>
+    <button onclick="stop()">stop</button>
+    <br><br>
+    <button onclick="losujStany()">losuj stany</button>
+    <button onclick="wyczysc()">wyczyść planszę</button>
+    <div style="display:flex;">
+    <fieldset>
+        <legend>połóż komórki</legend>
+        <select id="wybor_kladzenia">
+            <option value="zywa_komorka">żywa komórka</option>
+            <option value="martwa_komorka">martwa komórka</option>
+            <option value="r-pentomino">r-pentomino</option>
+            <option value="glider">glider</option>
+        </select>
+        <br>
+        <label>prawy górny x:</label>
+        <input type="number" value=1 min=1 id="kladzenie_x">
+        <br>
+        <label>prawy górny y:</label>
+        <input type="number" value=1  min=1 id="kladzenie_y">
+        <br>
+        <button onclick="poloz()">połóż!</button>
+    </fieldset>
+    </div>
+    <div style="display:flex;">
+    <fieldset>
+        <legend>ustawienia</legend>
+        <label>wielkość planszy:</label>
+        <input type="range" min=4 max=200 value=100 id="suwakX" oninput="zmianaLiczbyKomorekX()">
+        <label id="labelX">100</label> × <label id="labelY">75</label>
+        <br>
+        <label>kolor martwych komórek:</label>
+        <input type="color" value="#fa6464" id="zmieniaczMartwej" oninput="zmianaKoloruMartwej()">
+        <br>
+        <label>kolor żywych komórek:</label>
+        <input type="color" value="#3296fa" id="zmieniaczZywej" oninput="zmianaKoloruZywej()">
+        <br>
+        <button onclick="zamienKolory()">zamień kolory</button>
+    </fieldset>
+    </div>
+    <script>
+        let uchwyt_animacji;
+        let plansza, rysowanie;
+        plansza = document.getElementById("plansza_canvas");
+        rysowanie = plansza.getContext("2d");
+        const plansza_szer = plansza.width, plansza_wys = plansza.height;
+        const tlo_kolor = "rgb(0,255,50)";
+        let martwa_kolor = "rgb(250,100,100)";
+        let zywa_kolor = "rgb(50,150,250)";
+        let ile_na_szer = 100;
+        let komorka_szer = plansza_szer/ile_na_szer;
+        let komorka_wys = komorka_szer;
+        let ile_na_wys = Math.ceil(plansza_wys/komorka_wys);
+        const MARTWA = 0, ZYWA = 1;
+        let tablica_zyc = [];
+        let tablica_potomkow = [];
+        for(let i=0;i<=ile_na_szer+1;i++){
+            tablica_zyc[i] = [];
+            tablica_potomkow[i] = [];
+            for(let j=0;j<=ile_na_wys+1;j++){
+                tablica_zyc[i][j] = MARTWA;   
+                tablica_potomkow[i][j] = MARTWA;
+            }
+        } 
+        
+        ustawTlo(tlo_kolor);
+        aktualizuj();
+        //startuj();
+        function ustawTlo(kolorek){
+            rysowanie.fillStyle = kolorek;
+            rysowanie.fillRect(0,0,plansza_szer,plansza_wys);
+        }
+        
+        function ustawStanKomorki(x,y, stan){
+            if(stan==1){
+            rysowanie.fillStyle = zywa_kolor;
+            }
+            if(stan==0){
+            rysowanie.fillStyle = martwa_kolor;
+            }
+            rysowanie.fillRect((x-1)*komorka_szer,(y-1)*komorka_wys,komorka_szer,komorka_wys);
+        }
+        
+        function aktualizuj(){
+            for(let i=0;i<=ile_na_szer+1;i++){
+                for(let j=0;j<=ile_na_wys+1;j++){
+                    ustawStanKomorki(i,j, tablica_zyc[i][j]);
+                }
+            }
+        }   
+            
+        function losujStany(){
+            stop();
+            for(let i=1;i<=ile_na_szer;i++){
+                for(let j=1;j<=ile_na_wys;j++){
+                    tablica_zyc[i][j] = Math.round(Math.random());
+                }
+            }
+            aktualizuj();
+        } 
+        
+        function obliczStan(i,j){
+            let suma = 0;
+            for(let k=i-1;k<=i+1;k++){
+                for(let l=j-1;l<=j+1;l++){
+                    suma+=tablica_zyc[k][l];
+                }
+            }
+            suma-=tablica_zyc[i][j];
+            if(tablica_zyc[i][j] == ZYWA){
+                if(suma==2 || suma==3){
+                    return ZYWA;
+                }
+                return MARTWA;
+            }
+            if(suma==3){
+                return ZYWA;
+            }
+            return MARTWA;
+        }
+        function obliczPotomkow(){
+            for(let i=1;i<=ile_na_szer;i++){
+                for(let j=1;j<=ile_na_wys;j++){
+                    tablica_potomkow[i][j] = obliczStan(i,j);
+                }
+            }
+            
+            for(let i=1;i<=ile_na_szer;i++){
+                for(let j=1;j<=ile_na_wys;j++){
+                    tablica_zyc[i][j] = tablica_potomkow[i][j];
+                }
+            }
+            
+        }
+        
+        function animacja(){
+            aktualizuj();
+            obliczPotomkow();
+        }
+        function startuj(){
+            clearInterval(uchwyt_animacji);
+            uchwyt_animacji = setInterval(animacja, 50);
+        }
+        function stop(){
+            clearInterval(uchwyt_animacji);
+        }
+        function wyczysc(){
+            stop();
+            tablica_zyc = [];
+            tablica_potomkow = [];
+            for(let i=0;i<=ile_na_szer+1;i++){
+            tablica_zyc[i] = [];
+            tablica_potomkow[i] = [];
+            for(let j=0;j<=ile_na_wys+1;j++){
+                tablica_zyc[i][j] = MARTWA;   
+                tablica_potomkow[i][j] = MARTWA;
+            }
+        }
+        aktualizuj(); 
+        }
+        function zmianaLiczbyKomorekX(){
+            ile_na_szer = document.getElementById("suwakX").value;
+            document.getElementById("labelX").innerHTML = ile_na_szer;
+            komorka_szer = plansza_szer/ile_na_szer;
+            komorka_wys = komorka_szer;
+            ile_na_wys = Math.ceil(plansza_wys/komorka_wys);
+            document.getElementById("labelY").innerHTML = ile_na_wys;
+            wyczysc();
+        } 
+       
+        function zmianaKoloruMartwej(){
+            martwa_kolor = kolorNaRGB(document.getElementById("zmieniaczMartwej").value);
+            aktualizuj();
+            
+        }
+        function zmianaKoloruZywej(){
+            zywa_kolor = kolorNaRGB(document.getElementById("zmieniaczZywej").value);
+            aktualizuj();
+            
+        }
+        function zamienKolory(){
+            let nowa_zywa = martwa_kolor;
+            martwa_kolor = zywa_kolor;
+            zywa_kolor = nowa_zywa;
+            aktualizuj();
+            let nowy_zmieniacz_zywej = document.getElementById("zmieniaczZywej").value
+            document.getElementById("zmieniaczZywej").value = document.getElementById("zmieniaczMartwej").value;
+            document.getElementById("zmieniaczMartwej").value = nowy_zmieniacz_zywej;
+        }
+       
+        function kolorNaRGB(kolorek){
+            let r = parseInt(kolorek.substring(1, 3), 16);
+            let g = parseInt(kolorek.substring(3, 5), 16);
+            let b = parseInt(kolorek.substring(5, 7), 16);
+            let wynik = "rgb(" + r + "," + g + ","+ b + ")";
+            return wynik;
+        }
+        
+        function poloz(){
+            let x = document.getElementById("kladzenie_x").value;
+            let y = document.getElementById("kladzenie_y").value;
+            let w;
+            let s;
+            let ksztalt = []; 
+            stop();
+            switch(document.getElementById("wybor_kladzenia").value){
+                case "zywa_komorka":
+                    w = 1;
+                    s = 1;
+                    ksztalt = [[ZYWA]];
+                    break;
+                case "martwa_komorka":
+                    w = 1;
+                    s = 1;
+                    ksztalt = [[MARTWA]];
+                    break;
+                case "r-pentomino":
+                    w = 3;
+                    s = 3;       
+                    ksztalt =[[MARTWA, ZYWA, ZYWA], 
+                    [ZYWA, ZYWA, MARTWA], 
+                    [MARTWA, ZYWA, MARTWA]];
+                    break;
+                case "glider":
+                    w = 3;
+                    s = 3;
+                    ksztalt =[
+                    [MARTWA, ZYWA, MARTWA],
+                    [MARTWA, MARTWA, ZYWA],
+                    [ZYWA, ZYWA, ZYWA]
+                    ];
+                    break;
+            }
+            if(parseInt(x)+s-1 > ile_na_szer || parseInt(y)+w-1 > ile_na_wys || parseInt(x)<1 || parseInt(y)<1){
+            return 0;
+            }
+            for(let n=0;n<s;n++){
+                for(let m=0;m<w;m++){
+                    tablica_zyc[parseInt(x)+n][parseInt(y)+m] = ksztalt[m][n];
+                }
+            }
+            aktualizuj();
+        }
+       
+    </script>
+</body>
+</html>
